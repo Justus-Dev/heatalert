@@ -1,11 +1,10 @@
 # Submission draft: HeatWatch
 
-> Fill the remaining `<…>` placeholders (Bedrock feedback) before submitting. Everything else can be pasted as-is.
+> Everything below can be pasted as-is.
 
 ## Tracks
 
 - **Primary track:** Ring (priority categories: caretaking, accessibility, IoT home automation)
-- **Mini challenge:** AWS Builder (Claude on Amazon Bedrock)
 - **Mini challenge:** Open Source (MIT-licensed project + upstream fix and feature for `ring-sandbox`)
 
 ## One-liner
@@ -17,7 +16,7 @@ via the Ring chime before it alarms the family.
 ## What we built during the submission window
 
 Everything in this repository is new: backend (FastAPI), presence/heat/escalation logic,
-Ring Partner API integration, Bedrock integration, per-contact family web app with an
+Ring Partner API integration, optional Bedrock integration, per-contact family web app with an
 optional access code, crash-safe state persistence, device-outage handling, demo console,
 four scenarios, unit and end-to-end tests, and docs.
 
@@ -50,19 +49,14 @@ four scenarios, unit and end-to-end tests, and docs.
   templates and never wait on a model.
 - **How:** `app/ai.py`. It detects AWS credentials, calls the Messages API on Bedrock with a short
   system prompt, handles `refusal`, times out after 20 s and falls back to templates.
-- **Worked well / needs work:** `<fill in after testing with your AWS account>`
-- **Would build again:** `<yes/no + why>`
+- **Status:** integration is in the code but was **not tested against live Bedrock**: we
+  had no AWS account set up in time. The demo runs on the template fallback, which the UI
+  labels as such. For that reason we are not entering the AWS Builder mini challenge.
 
 ### Open-Meteo
 - **Used for:** live forecast (feels-like maximum) and **historical archive replay** of a
   real heatwave day (Berlin, 20 Jul 2022: 37.7 °C, feels like 36.4 °C).
 - **Worked well:** no key, fast, archive API is perfect for honest demos.
-
-## AWS Builder: required details
-
-- **Services:** Amazon Bedrock (Claude via the Messages API on Bedrock).
-- **Integration:** `app/ai.py` (`Writer`), used by `app/engine.py` (`_send_nudge`, `summary`).
-  Configuration: `AWS_REGION`, `BEDROCK_MODEL_ID`, `BEDROCK_ENABLED` in `.env`.
 
 ## Open Source: required details
 
@@ -108,6 +102,6 @@ See `FRICTION_LOG.md` (8 entries with severity, workaround and suggestion).
 5. **1:35 Same day, normal weather (20 s):** replay with "Normal": still quiet at 13:05;
    check-in only at 15:05.
 6. **1:55 False alarm caught (25 s):** nap scenario; chime → movement → "nobody was alerted".
-   Then the 17:00 care hint written by Claude on Bedrock.
+   Then the 17:00 care hint (template text; Bedrock-written when AWS credentials are set).
 7. **2:20 Close (10 s):** door logic (out for the day, no alarm), devices failing safely
    (`device_trouble`), privacy, open source.

@@ -4,7 +4,7 @@
 when *nothing* happens, and gets more careful when it is hot.**
 
 Amazon Developer Hackathon 2026 · Primary track: **Ring** (caretaking, accessibility,
-IoT home automation) · Mini challenges: **AWS Builder**, **Open Source**
+IoT home automation) · Mini challenge: **Open Source**
 
 ---
 
@@ -39,8 +39,8 @@ and puts that absence in context:
    An "I'm on it" pauses the escalation, but it has to end in "is OK". After 30 minutes
    HeatWatch asks again, and if there is still no answer it moves on to the next contact.
 5. **A gentle care hint, not an alarm:** on a heat day when nobody came or went all day,
-   the family gets a short note at 17:00 suggesting a call. It is written by Claude on
-   Amazon Bedrock.
+   the family gets a short note at 17:00 suggesting a call. With AWS credentials it is
+   written by Claude on Amazon Bedrock, otherwise it uses a fixed template.
 
 ### Privacy is part of the design
 
@@ -153,7 +153,7 @@ household and registers its webhook (`/_sandbox/webhooks`) with the shared signi
 | Scenario | What it shows |
 |---|---|
 | `heat_day_emergency` | Shopping trip (left/returned via the door logic), cat ignored, indoor heat from the Ring sensor, no movement after 11:05 → chime 13:05 → Anna 13:10 → Mr. Weber 13:25 → everyone 13:40. **Replay with "Normal" weather: the check-in only comes at 15:05.** |
-| `heat_day_false_alarm` | Long nap; chime at 13:20; movement 90 s later; **nobody alerted**. Care hint at 17:00 (Bedrock). |
+| `heat_day_false_alarm` | Long nap; chime at 13:20; movement 90 s later; **nobody alerted**. Care hint at 17:00. |
 | `out_for_the_day` | 4.5 h without indoor movement but the door shows she left: **no alarm**. |
 | `device_trouble` | Door sensor and chime go offline. HeatWatch assumes she is home, can't play the tone, so it alerts Anna directly and explains why. She comes back → all-clear. |
 
@@ -178,7 +178,8 @@ With AWS credentials available (env vars, `~/.aws`, SSO) and access to Claude on
 HeatWatch uses the Anthropic SDK's Bedrock client (`AnthropicBedrockMantle`, model
 `anthropic.claude-opus-5-5`, effort `low`) for the care hint and the day summary. Without
 credentials it uses fixed templates and says so in the UI. **Alerts never depend on an
-LLM.**
+LLM.** This path is implemented but was not tested against live Bedrock during the
+hackathon; the demo uses the template fallback.
 
 ### Tests
 
