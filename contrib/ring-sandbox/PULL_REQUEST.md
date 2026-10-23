@@ -1,6 +1,6 @@
 # PR for josepha-mayo/ring-sandbox
 
-**Branch:** `fix/history-sub-type-and-step-meta` (based on upstream `main` @ `2710bdf`)
+**PR:** https://github.com/josepha-mayo/ring-sandbox/pull/20 · **Branch:** `fix/history-sub-type-and-step-meta` (based on upstream `main` @ `2710bdf`)
 **Title:** Declare `HistoryEventAttributes.sub_type`; let scenario steps carry app metadata
 
 ## What

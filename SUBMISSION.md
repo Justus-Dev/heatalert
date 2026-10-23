@@ -1,6 +1,6 @@
 # Submission draft: HeatWatch
 
-> Fill the remaining `<…>` placeholders (PR number, Bedrock feedback) before submitting. Everything else can be pasted as-is.
+> Fill the remaining `<…>` placeholders (Bedrock feedback) before submitting. Everything else can be pasted as-is.
 
 ## Tracks
 
@@ -67,7 +67,7 @@ four scenarios, unit and end-to-end tests, and docs.
 ## Open Source: required details
 
 - **Repo URL:** https://github.com/Justus-Dev/heatalert (MIT)
-- **Contribution URL:** `<PR URL>` (fork branch: https://github.com/Justus-Dev/ring-sandbox/tree/fix/history-sub-type-and-step-meta)
+- **Contribution URL:** https://github.com/josepha-mayo/ring-sandbox/pull/20 (fork branch: https://github.com/Justus-Dev/ring-sandbox/tree/fix/history-sub-type-and-step-meta)
 - **GitHub username:** Justus-Dev
 - **What / how / why:** A contribution to `ring-sandbox`, the community Ring Partner API
   emulator HeatWatch is built on, with tests:
