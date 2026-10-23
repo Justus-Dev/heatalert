@@ -1,0 +1,29 @@
+# Devices fail on a heat day. HeatWatch tells the family what it can no longer see,
+# and stays on the safe side:
+#   09:30 the front door sensor goes offline  -> leaving can no longer be detected,
+#         so HeatWatch assumes Margaret is home.
+#   10:00 Margaret actually goes out (only the doorbell camera sees her).
+#   11:00 the chime goes offline              -> no check-in tone is possible.
+#   11:20 two hours without movement on a heat day: with no chime, Anna is alerted
+#         directly - and told why.
+#   11:40 Margaret comes back, the indoor camera sees her -> all-clear to Anna.
+#   12:30 both devices are back online.
+name: device_trouble
+description: Door sensor and chime go offline - HeatWatch degrades safely and says so.
+heatwatch:
+  start: "08:45"
+  end: "13:30"
+  weather: heat
+  speed: 60
+  initial_presence: home
+steps:
+  - {offset_s: 300, type: motion_detected, sub_type: human, device: Living Room}      # 08:50
+  - {offset_s: 2100, type: motion_detected, sub_type: human, device: Living Room}     # 09:20
+  - {offset_s: 2700, type: device_offline, device: Front Door Sensor}                 # 09:30
+  - {offset_s: 4500, type: motion_detected, sub_type: human, device: Front Door}      # 10:00 goes out
+  - {offset_s: 8100, type: device_offline, device: Kitchen Chime}                     # 11:00
+  - {offset_s: 10500, type: motion_detected, sub_type: human, device: Front Door}     # 11:40 back
+  - {offset_s: 10560, type: motion_detected, sub_type: human, device: Living Room}
+  - {offset_s: 13500, type: device_online, device: Front Door Sensor}                 # 12:30
+  - {offset_s: 13800, type: device_online, device: Kitchen Chime}                     # 12:35
+  - {offset_s: 15300, type: motion_detected, sub_type: human, device: Living Room}    # 13:00

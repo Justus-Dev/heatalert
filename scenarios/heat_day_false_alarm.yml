@@ -1,0 +1,25 @@
+# Margaret stays in all day (sensible in a heatwave) and naps after lunch.
+# At 13:20 HeatWatch plays the check-in tone; she gets up 90 seconds later, the
+# indoor camera sees movement, and nobody in the family is bothered.
+# At 17:00 - nobody came or went all day - the family gets a gentle care hint
+# (written by Claude on Amazon Bedrock when configured).
+name: heat_day_false_alarm
+description: Long nap on a hot day - the chime check-in catches the false alarm.
+heatwatch:
+  start: "08:45"
+  end: "17:30"
+  weather: heat
+  speed: 90
+  initial_presence: home
+  checkin_response:
+    after_min: 1.5        # she moves 90 simulated seconds after the first tone
+  heat_only_steps:
+    - {offset_s: 15300, type: temperature_exceeded, device: Living Room Climate}   # 13:00
+steps:
+  - {offset_s: 600, type: motion_detected, sub_type: human, device: Living Room}      # 08:55
+  - {offset_s: 3300, type: motion_detected, sub_type: human, device: Living Room}     # 09:40
+  - {offset_s: 6300, type: motion_detected, sub_type: human, device: Living Room}     # 10:30
+  - {offset_s: 9300, type: motion_detected, sub_type: human, device: Living Room}     # 11:20 lies down
+  - {offset_s: 19500, type: motion_detected, sub_type: human, device: Living Room}    # 14:10
+  - {offset_s: 23700, type: motion_detected, sub_type: human, device: Living Room}    # 15:20
+  - {offset_s: 27900, type: motion_detected, sub_type: human, device: Living Room}    # 16:30

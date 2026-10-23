@@ -1,0 +1,33 @@
+# Margaret goes shopping in the morning, comes home, and stops moving after 11:05.
+# Replay it with the "heat" weather (Berlin, 20 Jul 2022) and with "normal" weather
+# (Berlin, 21 May 2019): same events, but on the heat day HeatWatch checks in at 13:05
+# instead of 15:05 - two hours earlier.
+#
+# Plain ring-sandbox scenario: `ring-sandbox play scenarios/heat_day_emergency.yml`
+# also works (it ignores the `heatwatch:` block). Offsets are seconds after `start`.
+name: heat_day_emergency
+description: Margaret comes home from shopping and then shows no more signs of life.
+heatwatch:
+  start: "08:45"
+  end: "15:30"
+  weather: heat
+  speed: 60
+  initial_presence: home
+  heat_only_steps:
+    - {offset_s: 13500, type: temperature_exceeded, device: Living Room Climate}   # 12:30
+steps:
+  - {offset_s: 300, type: motion_detected, sub_type: human, device: Living Room}      # 08:50
+  - {offset_s: 2100, type: motion_detected, sub_type: human, device: Living Room}     # 09:20
+  # 09:30 leaves for the shop: door opens, person seen outside, door closes, nothing inside
+  - {offset_s: 2700, type: contact_sensor_faulted, device: Front Door Sensor}
+  - {offset_s: 2720, type: motion_detected, sub_type: human, device: Front Door}
+  - {offset_s: 2740, type: contact_sensor_cleared, device: Front Door Sensor}
+  # 10:25 comes back: seen outside, door opens and closes, movement inside
+  - {offset_s: 6000, type: motion_detected, sub_type: human, device: Front Door}
+  - {offset_s: 6030, type: contact_sensor_faulted, device: Front Door Sensor}
+  - {offset_s: 6050, type: contact_sensor_cleared, device: Front Door Sensor}
+  - {offset_s: 6100, type: motion_detected, sub_type: human, device: Living Room}
+  - {offset_s: 6900, type: motion_detected, sub_type: human, device: Living Room}     # 10:40
+  - {offset_s: 8400, type: motion_detected, sub_type: human, device: Living Room}     # 11:05 last sign of life
+  # 12:10 the cat walks past the camera - must NOT count as a sign of life
+  - {offset_s: 12300, type: motion_detected, sub_type: animal, device: Living Room}

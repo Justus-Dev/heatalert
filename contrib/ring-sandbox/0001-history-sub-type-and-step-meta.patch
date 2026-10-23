@@ -1,0 +1,195 @@
+From 2be9b30922cbbc83a08868efb83e7a852a7757e3 Mon Sep 17 00:00:00 2001
+From: Justus134 <90705561+Justus134@users.noreply.github.com>
+Date: Fri, 23 Oct 2026 15:40:14 +0200
+Subject: [PATCH] Declare HistoryEventAttributes.sub_type; let scenario steps
+ carry app metadata
+
+- HistoryEventAttributes.sub_type is now declared (always None, since history
+  resources withhold it), so `ev.attributes.sub_type` reads as None instead of
+  raising AttributeError in loops over client.events().
+- Scenario steps accept a `meta:` mapping and `x-`-prefixed keys, collected into
+  Step.meta and never sent to the emulator. Apps can annotate their own scenario
+  files and still replay them with `ring-sandbox play`.
+- Unknown step keys now raise a ValueError naming the key and step index, with a
+  hint, instead of a raw dataclass TypeError.
+
+Tests cover both changes; ruff check and format pass.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ CHANGELOG.md                  |  8 ++++++++
+ README.md                     |  2 +-
+ src/ring_sandbox/models.py    |  3 +++
+ src/ring_sandbox/scenarios.py | 31 +++++++++++++++++++++++++++----
+ tests/test_client_emulator.py |  2 ++
+ tests/test_scenarios_live.py  | 30 ++++++++++++++++++++++++++++++
+ 6 files changed, 71 insertions(+), 5 deletions(-)
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index dd4e3f9..694452c 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -26,6 +26,10 @@
+   capability null-keys + `reported_at` parity; `component_id` accepted on
+   configurations; `meta.riid` on generated motion records.
+ 
++- **Step metadata** — scenario steps accept a `meta:` mapping and any
++  `x-`-prefixed key (collected into `Step.meta`), so apps can annotate their
++  own scenario files and still replay them with `ring-sandbox play`.
++
+ ### Changed
+ 
+ - `latest_in_range` image requests now 416 when no recording covers the
+@@ -40,6 +44,10 @@
+ ### Fixed
+ 
+ - Image downloads logged the `on_demand` history row twice.
++- `HistoryEventAttributes.sub_type` is declared (always `None`, since history
++  withholds it), so `ev.attributes.sub_type` no longer raises `AttributeError`.
++- Scenario steps with an unknown key now name the key and the step index
++  instead of surfacing a raw dataclass `TypeError`.
+ - Video downloads accepted `duration <= 0`.
+ 
+ ## 0.5.0 — 2026-10-04
+diff --git a/README.md b/README.md
+index 8c933d8..ecb2888 100644
+--- a/README.md
++++ b/README.md
+@@ -63,7 +63,7 @@ ring-sandbox play examples/late_arrival.yml    # or your own scenario file: name
+ ring-sandbox inject --type motion_detected --sub-type human
+ ```
+ 
+-Custom scenarios are plain YAML — `steps` entries take `offset_s`, `type`, optional `sub_type`, `device` (id or name), and `duration_ms`. Three documented examples ship **inside the wheel** (also in `examples/`): `late_arrival` (aide shows 25 min late), `partial_blackout` (camera dies mid-visit — departure unobserved), `visitor_not_worker` (courier activity in the aide's window). `ring_sandbox.scenarios.resolve()` tries built-ins, then shipped examples, then file paths.
++Custom scenarios are plain YAML — `steps` entries take `offset_s`, `type`, optional `sub_type`, `device` (id or name), and `duration_ms`. App-specific data goes under a step's `meta:` mapping or in `x-`-prefixed keys (both land in `Step.meta`; the emulator ignores them). Three documented examples ship **inside the wheel** (also in `examples/`): `late_arrival` (aide shows 25 min late), `partial_blackout` (camera dies mid-visit — departure unobserved), `visitor_not_worker` (courier activity in the aide's window). `ring_sandbox.scenarios.resolve()` tries built-ins, then shipped examples, then file paths.
+ 
+ Interactive docs at `http://127.0.0.1:8787/_sandbox/docs`. Drop real `default.jpg` / `default.mp4` (or `<device_id>.jpg`) in a folder and pass `--media-dir` to serve real media instead of placeholders.
+ 
+diff --git a/src/ring_sandbox/models.py b/src/ring_sandbox/models.py
+index 3d40f1b..d71fd0c 100644
+--- a/src/ring_sandbox/models.py
++++ b/src/ring_sandbox/models.py
+@@ -266,6 +266,9 @@ class HistoryEventType(StrEnum):
+ 
+ class HistoryEventAttributes(_Model):
+     event_type: str
++    # Withheld by the API on history resources (filter-only), so always None here;
++    # declared so `ev.attributes.sub_type` reads as None instead of raising.
++    sub_type: str | None = None
+     is_third_party_reviewed: bool | None = None
+     start: int
+     end: int | None = None
+diff --git a/src/ring_sandbox/scenarios.py b/src/ring_sandbox/scenarios.py
+index 85e245a..481bf2a 100644
+--- a/src/ring_sandbox/scenarios.py
++++ b/src/ring_sandbox/scenarios.py
+@@ -13,7 +13,7 @@ media endpoints reject future timestamps). ``speed`` only controls pacing: ``spe
+ from __future__ import annotations
+ 
+ import time
+-from dataclasses import dataclass, field
++from dataclasses import dataclass, field, fields
+ from datetime import UTC, datetime, timedelta
+ from typing import Any
+ 
+@@ -27,6 +27,7 @@ class Step:
+     sub_type: str | None = None
+     device: str | None = None  # device name or id; None = first camera
+     duration_ms: int = 20_000
++    meta: dict[str, Any] = field(default_factory=dict)  # app data; never sent to the emulator
+ 
+ 
+ @dataclass
+@@ -106,11 +107,33 @@ def _parse_scenario(raw: Any, source: str) -> Scenario:
+         raise ValueError(f"{source}: expected a mapping with 'name' and 'steps'")
+     if "name" not in raw:
+         raise ValueError(f"{source}: missing required 'name'")
++    steps = [_parse_step(s, source, i) for i, s in enumerate(raw.get("steps", []))]
++    return Scenario(raw["name"], raw.get("description", ""), steps)
++
++
++_STEP_FIELDS = {f.name for f in fields(Step)}
++
++
++def _parse_step(raw: Any, source: str, index: int) -> Step:
++    """Build a Step; ``x-`` keys are app extensions and land in ``meta``."""
++    if not isinstance(raw, dict):
++        raise ValueError(f"{source}: bad step #{index} — expected a mapping")
++    known = {k: v for k, v in raw.items() if k in _STEP_FIELDS}
++    extensions = {k: v for k, v in raw.items() if isinstance(k, str) and k.startswith("x-")}
++    unknown = sorted(str(k) for k in raw.keys() - known.keys() - extensions.keys())
++    if unknown:
++        raise ValueError(
++            f"{source}: bad step #{index} — unknown key(s) {', '.join(unknown)}; "
++            "put app-specific data under 'meta:' or prefix it with 'x-'"
++        )
++    if "meta" in known and not isinstance(known["meta"], dict):
++        raise ValueError(f"{source}: bad step #{index} — 'meta' must be a mapping")
+     try:
+-        steps = [Step(**s) for s in raw.get("steps", [])]
++        step = Step(**known)
+     except TypeError as exc:
+-        raise ValueError(f"{source}: bad step — {exc}") from exc
+-    return Scenario(raw["name"], raw.get("description", ""), steps)
++        raise ValueError(f"{source}: bad step #{index} — {exc}") from exc
++    step.meta = {**step.meta, **extensions}
++    return step
+ 
+ 
+ def load_yaml(path: str) -> Scenario:
+diff --git a/tests/test_client_emulator.py b/tests/test_client_emulator.py
+index 0cfd83a..d6e5046 100644
+--- a/tests/test_client_emulator.py
++++ b/tests/test_client_emulator.py
+@@ -153,6 +153,8 @@ def test_snapshot_and_clip(ring_client: RingClient, ring_control, ring_world: Wo
+     # API it writes a fresh on_demand history entry for the media request itself
+     history = list(ring_client.events(cam.id))
+     assert history[0].attributes.event_type == "on_demand"
++    # sub_type is withheld on history resources; the model still exposes it as None
++    assert all(e.attributes.sub_type is None for e in history)
+     motion = next(e for e in history if e.attributes.event_type == "motion")
+     assert motion.attributes.is_third_party_reviewed is True
+ 
+diff --git a/tests/test_scenarios_live.py b/tests/test_scenarios_live.py
+index d993897..bc3b96f 100644
+--- a/tests/test_scenarios_live.py
++++ b/tests/test_scenarios_live.py
+@@ -157,6 +157,36 @@ def test_load_yaml_rejects_malformed_files_with_clear_errors(tmp_path):
+         resolve(str(bad_step))
+ 
+ 
++def test_steps_carry_app_metadata_and_name_unknown_keys(tmp_path):
++    from ring_sandbox.scenarios import resolve
++
++    path = tmp_path / "meta.yml"
++    path.write_text(
++        "name: meta\n"
++        "myapp: {speed: 60}\n"
++        "steps:\n"
++        "  - offset_s: 0\n"
++        "    meta: {label: left home}\n"
++        "  - offset_s: 5\n"
++        "    type: button_press\n"
++        "    x-label: visitor\n",
++        encoding="utf-8",
++    )
++    first, second = resolve(str(path)).steps
++    assert first.meta == {"label": "left home"} and first.type == "motion_detected"
++    assert second.meta == {"x-label": "visitor"} and second.type == "button_press"
++
++    typo = tmp_path / "typo.yml"
++    typo.write_text("name: x\nsteps:\n  - offset_s: 0\n    subtype: human\n", encoding="utf-8")
++    with pytest.raises(ValueError, match=r"bad step #0 .*unknown key\(s\) subtype"):
++        resolve(str(typo))
++
++    bad_meta = tmp_path / "bad_meta.yml"
++    bad_meta.write_text("name: x\nsteps:\n  - offset_s: 0\n    meta: oops\n", encoding="utf-8")
++    with pytest.raises(ValueError, match="'meta' must be a mapping"):
++        resolve(str(bad_meta))
++
++
+ def test_resolve_loads_yaml_paths(tmp_path):
+     from ring_sandbox.scenarios import resolve
+ 
+-- 
+2.54.0 (Apple Git-157)
+

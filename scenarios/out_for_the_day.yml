@@ -1,0 +1,28 @@
+# Margaret leaves at 10:00 and is out for four and a half hours. The indoor camera
+# sees nothing the whole time - and HeatWatch correctly raises no alarm, because the
+# front door told it she left. A courier rings while she is out; that changes nothing.
+name: out_for_the_day
+description: Nobody inside for hours is fine when the door shows she went out.
+heatwatch:
+  start: "08:45"
+  end: "15:30"
+  weather: heat
+  speed: 60
+  initial_presence: home
+steps:
+  - {offset_s: 600, type: motion_detected, sub_type: human, device: Living Room}      # 08:55
+  - {offset_s: 3000, type: motion_detected, sub_type: human, device: Living Room}     # 09:35
+  # 10:00 leaves
+  - {offset_s: 4500, type: contact_sensor_faulted, device: Front Door Sensor}
+  - {offset_s: 4520, type: motion_detected, sub_type: human, device: Front Door}
+  - {offset_s: 4540, type: contact_sensor_cleared, device: Front Door Sensor}
+  # 12:00 courier rings, nobody answers
+  - {offset_s: 11690, type: motion_detected, sub_type: human, device: Front Door}
+  - {offset_s: 11700, type: button_press, device: Front Door}
+  - {offset_s: 11760, type: motion_detected, sub_type: package, device: Front Door}
+  # 14:30 comes home
+  - {offset_s: 20700, type: motion_detected, sub_type: human, device: Front Door}
+  - {offset_s: 20730, type: contact_sensor_faulted, device: Front Door Sensor}
+  - {offset_s: 20750, type: contact_sensor_cleared, device: Front Door Sensor}
+  - {offset_s: 20800, type: motion_detected, sub_type: human, device: Living Room}
+  - {offset_s: 22500, type: motion_detected, sub_type: human, device: Living Room}    # 15:00

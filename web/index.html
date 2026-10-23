@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>HeatWatch</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23F26B1D'/%3E%3Cpath d='M16 7c3 4 6 7 6 11a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3-1-3 0-6 2-9z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="stage">
+
+    <!-- ================================================================ the product -->
+    <section class="device" aria-label="HeatWatch app">
+      <div class="app">
+        <header class="top">
+          <div class="brand">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9"/><path d="M16 7c3 4 6 7 6 11a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3-1-3 0-6 2-9z"/></svg>
+            <span>HeatWatch</span>
+          </div>
+          <div id="viewer-chip" class="viewer-chip" hidden></div>
+        </header>
+
+        <div id="toasts" class="toasts" aria-live="polite"></div>
+
+        <main id="scroll" class="scroll">
+          <div id="view-login" class="view" hidden>
+            <form id="login-form" class="login">
+              <div class="login-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+              <h1>Family access</h1>
+              <p class="muted">Enter the access code your family set up for HeatWatch.</p>
+              <input id="login-code" type="password" autocomplete="current-password" placeholder="Access code" required>
+              <p id="login-error" class="error" hidden></p>
+              <button class="btn primary block" type="submit">Continue</button>
+            </form>
+          </div>
+
+          <div id="view-setup" class="view" hidden></div>
+
+          <div id="view-today" class="view" hidden>
+            <div class="greet">
+              <h1 id="greet-title"></h1>
+              <p id="greet-sub"></p>
+            </div>
+            <div id="restored"></div>
+            <section id="hero" class="card hero"></section>
+            <section id="escalation"></section>
+            <section id="degraded"></section>
+            <section id="heat" class="card"></section>
+            <section class="card">
+              <div class="card-head">
+                <h2>Today</h2>
+                <label class="toggle"><input type="checkbox" id="show-raw"><span class="track"></span>Ring events</label>
+              </div>
+              <ol id="timeline" class="timeline"></ol>
+            </section>
+            <section class="card">
+              <div class="card-head"><h2>Day summary</h2></div>
+              <p class="fine">A short, calm summary for the family.</p>
+              <div id="summary" class="summary" hidden></div>
+              <button class="btn ghost" id="btn-summary">Summarize today</button>
+            </section>
+          </div>
+
+          <div id="view-messages" class="view" hidden>
+            <div class="greet">
+              <h1>Messages</h1>
+              <p id="messages-sub"></p>
+            </div>
+            <button class="link" id="btn-notify-perm">Also show as desktop notifications</button>
+            <div id="messages"></div>
+          </div>
+
+          <div id="view-settings" class="view" hidden></div>
+        </main>
+
+        <nav class="tabs" aria-label="Sections">
+          <button class="tab active" data-view="today">
+            <svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-6v6H5A1.5 1.5 0 0 1 3.5 19z"/></svg>
+            <span>Today</span>
+          </button>
+          <button class="tab" data-view="messages">
+            <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0v4l1.5 3h-15L6 13z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+            <span>Messages</span><i id="badge" class="badge" hidden></i>
+          </button>
+          <button class="tab" data-view="settings" id="tab-settings">
+            <svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+            <span>Settings</span>
+          </button>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ================================================================ demo console -->
+    <aside class="console" aria-label="Demo console">
+      <div class="console-head">
+        <span class="demo-pill">Demo console</span>
+        <p>Not part of the product. It drives the <b>ring-sandbox</b> emulator, which stands in for a real Ring doorbell, indoor camera, door sensor, chime and climate sensor.</p>
+      </div>
+
+      <section class="panel">
+        <h3>Whose phone is this?</h3>
+        <div class="seg" id="viewer-seg"></div>
+        <p class="hint">Each contact gets their own view: <code>/?as=c1</code>. The family overview is for setup and settings.</p>
+      </section>
+
+      <section class="panel">
+        <h3>Replay a day</h3>
+        <div id="scenario-list" class="scenarios"></div>
+        <div class="field-row">
+          <span class="field-label">Weather</span>
+          <div class="seg" id="weather-seg">
+            <button data-weather="heat">Heatwave · 20 Jul 2022</button>
+            <button data-weather="normal">Normal · 21 May 2019</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Speed</span>
+          <div class="seg" id="speed-seg">
+            <button data-speed="30">×30</button><button data-speed="60">×60</button><button data-speed="120">×120</button><button data-speed="300">×300</button>
+          </div>
+        </div>
+        <p class="hint">Observed weather from the Open-Meteo historical archive for the household's location. Same events, different weather → different thresholds.</p>
+        <div class="button-row">
+          <button class="btn primary" id="btn-start">Start replay</button>
+          <button class="btn ghost" id="btn-pause">Pause</button>
+          <button class="btn ghost" id="btn-live">Live mode</button>
+        </div>
+        <div id="demo-status" class="demo-status"></div>
+      </section>
+
+      <section class="panel">
+        <h3>The physical world <span class="tag">emulator</span></h3>
+        <div class="actions-grid" id="manual-buttons">
+          <button data-action="indoor_motion">Margaret moves</button>
+          <button data-action="pet_motion">Cat walks by</button>
+          <button data-action="door_open">Door opens</button>
+          <button data-action="door_close">Door closes</button>
+          <button data-action="outside_person">Person outside</button>
+          <button data-action="doorbell">Doorbell rings</button>
+          <button data-action="indoor_hot">Flat gets too hot</button>
+          <button data-action="indoor_ok">Flat cools down</button>
+          <button data-action="camera_offline">Camera offline</button>
+          <button data-action="camera_online">Camera online</button>
+          <button data-action="chime_offline">Chime offline</button>
+          <button data-action="chime_online">Chime online</button>
+          <button data-action="door_sensor_offline">Door sensor offline</button>
+          <button data-action="door_sensor_online">Door sensor online</button>
+        </div>
+        <p class="hint">Each button injects an event into the emulator, which signs it (HMAC-SHA256) and delivers it to <code>/webhooks/ring</code> exactly like Ring does.</p>
+      </section>
+
+      <section class="panel">
+        <h3>Ring Partner API traffic</h3>
+        <dl class="kv" id="ring-kv"></dl>
+        <ol id="api-calls" class="log"></ol>
+      </section>
+
+      <section class="panel">
+        <h3>Emulator delivery journal</h3>
+        <ol id="journal" class="log"></ol>
+      </section>
+    </aside>
+  </div>
+
+  <template id="tpl-setup">
+    <form id="setup-form" class="setup" novalidate>
+      <div class="greet">
+        <h1>Look after someone through the heat</h1>
+        <p>HeatWatch notices when there are <em>no</em> signs of life at home, and gets more careful on hot days. Please set it up together with the person you look after.</p>
+      </div>
+
+      <fieldset class="card">
+        <legend><span class="step-num">1</span>Who are you looking after?</legend>
+        <label>Name<input name="person_name" required autocomplete="off"></label>
+        <label>What the family calls them<input name="person_nickname" required autocomplete="off"></label>
+        <label>Town (for heat warnings)<input name="location_name" required></label>
+        <div class="two">
+          <label>Latitude<input name="latitude" type="number" step="0.0001" required></label>
+          <label>Longitude<input name="longitude" type="number" step="0.0001" required></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend><span class="step-num">2</span>Who should we contact, in order?</legend>
+        <div id="setup-contacts"></div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend><span class="step-num">3</span>Night rest</legend>
+        <p class="fine">No check-ins during these hours.</p>
+        <div class="two">
+          <label>From<input name="quiet_start" type="time" required></label>
+          <label>Until<input name="quiet_end" type="time" required></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend><span class="step-num">4</span>Privacy and consent</legend>
+        <ul class="checks">
+          <li class="yes">HeatWatch reads <b>only event times</b> from Ring: motion, door opened, doorbell, too warm.</li>
+          <li class="yes">Event times are kept for <b>24 hours</b>, then deleted.</li>
+          <li class="no">No video is recorded or stored. No microphone. No live view.</li>
+          <li class="no">Nobody can watch the camera through HeatWatch.</li>
+        </ul>
+        <label class="check"><input type="checkbox" name="share_snapshot"><span>Only in an emergency, share the camera’s <b>last snapshot</b> with the contact who is alerted.</span></label>
+        <label class="check"><input type="checkbox" name="consent_given" required><span><b><span data-name>Margaret</span> knows about HeatWatch and agrees to it.</b></span></label>
+        <label>Consent recorded by<input name="consent_given_by" required placeholder="e.g. Margaret, with Anna present"></label>
+      </fieldset>
+
+      <p id="setup-error" class="error" hidden></p>
+      <button class="btn primary block" type="submit">Start looking after <span data-name>Margaret</span></button>
+    </form>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
